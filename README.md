@@ -53,7 +53,7 @@ You will need the following installed on your system:
     The application requires a **Gemini API Key** for its core AI functionalities. Create a file named `.env.local` in the root of the project and add your key:
     ```
     # .env.local
-    VITE_GEMINI_API_KEY="YOUR_GEMINI_API_KEY_HERE"
+    
     ```
     *Note: The application is configured to securely load this key only during the development process and should be managed securely in a production environment.*
 

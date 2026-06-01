@@ -166,21 +166,7 @@ const ChatView: React.FC<ChatViewProps> = ({ settings, notes, folders, onAiActio
 
   const handlePromptClick = (prompt: string) => {
       setInput(prompt);
-      // We don't call handleSend directly to avoid double state updates with setInput
   }
-  
-  useEffect(() => {
-    if (input) {
-        const timer = setTimeout(() => {
-            if (messages.length === 0 || messages[messages.length - 1].role === 'model') {
-                if(input.trim()){ // Ensure we don't send empty prompts
-                    handleSend(input);
-                }
-            }
-        }, 100);
-        return () => clearTimeout(timer);
-    }
-  }, [input]);
 
   const handleSpeak = async (text: string, index: number) => {
     if (isSpeaking === index) { // If it's already playing, stop it

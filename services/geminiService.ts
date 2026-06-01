@@ -2,6 +2,37 @@
 import { GoogleGenAI, Type, FunctionDeclaration, Modality, GenerateContentResponse } from '@google/genai';
 import { Note, Connection, Citation, AiAction, Folder } from '../types';
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retry<T>(operation: () => Promise<T>, retries = 3, delay = 500): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (error) {
+      attempt += 1;
+      if (attempt > retries) {
+        throw error;
+      }
+      await sleep(delay * Math.pow(2, attempt - 1));
+    }
+  }
+}
+
+function getResponseText(response: GenerateContentResponse): string {
+  const text = (response as any).text || (response.candidates?.[0]?.content as any)?.text;
+  if (typeof text === 'string') return text;
+  throw new Error('Received empty response from Gemini.');
+}
+
+function safeJsonParse<T>(value: string): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    throw new Error('Gemini returned invalid JSON.');
+  }
+}
+
 interface SummaryAndTags {
   summary: string;
   tags: string[];
@@ -13,7 +44,7 @@ export const summarizeAndTagNote = async (content: string, apiKey: string): Prom
   }
   const ai = new GoogleGenAI({ apiKey });
   try {
-    const response = await ai.models.generateContent({
+    const response = await retry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Analyze the following note content. Provide a concise, one-sentence summary and generate between 3 to 5 relevant tags (as single words or short phrases).
       
@@ -36,10 +67,10 @@ export const summarizeAndTagNote = async (content: string, apiKey: string): Prom
           required: ["summary", "tags"],
         }
       }
-    });
+    }), 3, 500);
     
-    const jsonString = response.text;
-    const result: SummaryAndTags = JSON.parse(jsonString);
+    const jsonString = getResponseText(response);
+    const result: SummaryAndTags = safeJsonParse<SummaryAndTags>(jsonString);
     return result;
 
   } catch (error) {
@@ -66,7 +97,7 @@ export const findConnections = async (notes: Note[], apiKey: string): Promise<Co
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await retry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Given the following list of notes, identify meaningful connections between them based on shared concepts, themes, or direct relationships. Only identify a connection if it's strong and relevant.
       
@@ -102,10 +133,10 @@ export const findConnections = async (notes: Note[], apiKey: string): Promise<Co
           }
         }
       }
-    });
+    }), 3, 500);
 
-    const jsonString = response.text;
-    const result: FoundConnections = JSON.parse(jsonString);
+    const jsonString = getResponseText(response);
+    const result: FoundConnections = safeJsonParse<FoundConnections>(jsonString);
 
     const validNoteIds = new Set(notes.map(n => n.id));
 
@@ -146,7 +177,8 @@ export const analyzeVisualMedia = async (
             model: model,
             contents: { parts: parts },
         });
-        return response.text;
+        const text = (response as any).text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+        return typeof text === 'string' ? text : null;
     } catch (error) {
         console.error("Error analyzing visual media:", error);
         throw error;
@@ -397,18 +429,18 @@ When asked to read notes, create or manage notes and folders, or propose code ch
             const stream = await ai.models.generateContentStream({
                 model: model,
                 contents: fullHistory,
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                config,
+                config: {
+                    ...config,
+                }
             });
+            const citations: Citation[] = [];
             for await (const chunk of stream) {
                 onChunk(chunk.text);
-            }
-            const finalResponse = await stream.response;
-            const citations: Citation[] = [];
-            if (finalResponse.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-                for (const chunk of finalResponse.candidates[0].groundingMetadata.groundingChunks) {
-                    if (chunk.web) {
-                        citations.push({ uri: chunk.web.uri, title: chunk.web.title || chunk.web.uri });
+                if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+                    for (const groundingChunk of chunk.candidates[0].groundingMetadata.groundingChunks) {
+                        if (groundingChunk.web) {
+                            citations.push({ uri: groundingChunk.web.uri, title: groundingChunk.web.title || groundingChunk.web.uri });
+                        }
                     }
                 }
             }
@@ -416,12 +448,14 @@ When asked to read notes, create or manage notes and folders, or propose code ch
         }
         
         // --- Tool usage flow ---
-        let response: GenerateContentResponse = await ai.models.generateContent({
+        let response: GenerateContentResponse = await retry(() => ai.models.generateContent({
             model: model,
             contents: fullHistory,
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            config,
-        });
+            config: {
+                ...config,
+                systemInstruction: systemInstruction,
+            },
+        }), 3, 500);
 
         const functionCalls = response.functionCalls;
 
@@ -448,15 +482,18 @@ When asked to read notes, create or manage notes and folders, or propose code ch
             const stream = await ai.models.generateContentStream({
                 model: model,
                 contents: historyWithToolResponses,
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                config,
+                config: {
+                    ...config,
+                    systemInstruction: systemInstruction,
+                },
             });
             for await (const chunk of stream) {
                 onChunk(chunk.text);
             }
         } else {
              // No tool calls, AI responded directly. Send the text in one chunk.
-             onChunk(response.text);
+             const directText = (response as any).text || (response.candidates?.[0]?.content as any)?.text;
+             onChunk(typeof directText === 'string' ? directText : '');
         }
 
         return { citations: [] };

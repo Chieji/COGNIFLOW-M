@@ -7,179 +7,119 @@ import KnowledgeGraph from './components/KnowledgeGraph';
 import SettingsModal from './components/SettingsModal';
 import ChatView from './components/ChatView';
 import DevStudioView from './components/DevStudioView';
-import { initialNotes, initialFolders, initialPatches, initialFeatureFlags, initialAuditLog } from './constants';
 import { BrainCircuitIcon } from './components/icons';
+import useAppStore from './stores/useAppStore';
 
 const App: React.FC = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [activeFolderId, setActiveFolderId] = useState<string | null>('all');
-  const [view, setView] = useState<View>(View.Notes);
-  const [theme, setTheme] = useState<Theme>('dark');
+  const notes = useAppStore(state => state.notes);
+  const folders = useAppStore(state => state.folders);
+  const connections = useAppStore(state => state.connections);
+  const activeNoteId = useAppStore(state => state.activeNoteId);
+  const activeFolderId = useAppStore(state => state.activeFolderId);
+  const view = useAppStore(state => state.view);
+  const theme = useAppStore(state => state.theme);
+  const settings = useAppStore(state => state.settings);
+  const patches = useAppStore(state => state.patches);
+  const featureFlags = useAppStore(state => state.featureFlags);
+  const auditLog = useAppStore(state => state.auditLog);
+
+  const initialize = useAppStore(state => state.initialize);
+  const createNote = useAppStore(state => state.createNote);
+  const updateNote = useAppStore(state => state.updateNote);
+  const deleteNote = useAppStore(state => state.deleteNote);
+  const addFolder = useAppStore(state => state.addFolder);
+  const updateFolder = useAppStore(state => state.updateFolder);
+  const reorderFolders = useAppStore(state => state.reorderFolders);
+  const setNotes = useAppStore(state => state.setNotes);
+  const setFolders = useAppStore(state => state.setFolders);
+  const setConnections = useAppStore(state => state.setConnections);
+  const setSettings = useAppStore(state => state.setSettings);
+  const setTheme = useAppStore(state => state.setTheme);
+  const setPatches = useAppStore(state => state.setPatches);
+  const setFeatureFlags = useAppStore(state => state.setFeatureFlags);
+  const setAuditLog = useAppStore(state => state.setAuditLog);
+  const setActiveNoteId = useAppStore(state => state.setActiveNoteId);
+  const setActiveFolderId = useAppStore(state => state.setActiveFolderId);
+  const setView = useAppStore(state => state.setView);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<AiSettings>({
-    tasks: {
-      chat: { provider: 'gemini' },
-      summary: { provider: 'gemini' },
-      translation: { provider: 'gemini' },
-    },
-    keys: { gemini: '', openai: '', anthropic: '', openrouter: '', groq: '', huggingface: '' },
-    huggingface: { modelId: 'mistralai/Mistral-7B-Instruct-v0.2' },
-  });
-
-  // Dev Studio State
-  const [patches, setPatches] = useState<PatchProposal[]>([]);
-  const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
-
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const defaultSettings: AiSettings = {
-        tasks: { chat: { provider: 'gemini' }, summary: { provider: 'gemini' }, translation: { provider: 'gemini' } },
-        keys: { gemini: '', openai: '', anthropic: '', openrouter: '', groq: '', huggingface: '' },
-        huggingface: { modelId: 'mistralai/Mistral-7B-Instruct-v0.2' },
+    initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#/share/')) return;
+
+    const importSharedNote = async () => {
+      try {
+        const encodedData = hash.substring(8);
+        const decodedString = atob(encodedData);
+        const sharedNoteData = JSON.parse(decodedString);
+
+        if (sharedNoteData.title && typeof sharedNoteData.content !== 'undefined') {
+          const newSharedNote: Note = {
+            id: `shared-${Date.now()}`,
+            title: `[Shared] ${sharedNoteData.title}`,
+            content: sharedNoteData.content,
+            summary: '',
+            tags: ['shared'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            folderId: null,
+            type: 'text',
+            attachments: [],
+          };
+          await setNotes([newSharedNote, ...notes]);
+          setActiveNoteId(newSharedNote.id);
+          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        }
+      } catch (e) {
+        console.error('Failed to parse shared note link:', e);
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      }
     };
-    // App data
-    const savedNotes = JSON.parse(localStorage.getItem('notes') || 'null') || initialNotes;
-    setNotes(savedNotes);
-    setFolders(JSON.parse(localStorage.getItem('folders') || 'null') || initialFolders);
-    setConnections(JSON.parse(localStorage.getItem('connections') || 'null') || []);
-    setTheme((localStorage.getItem('theme') as Theme) || 'dark');
-    setSettings(JSON.parse(localStorage.getItem('aiSettings') || 'null') || defaultSettings);
-    
-    // Dev Studio data
-    setPatches(JSON.parse(localStorage.getItem('patches') || 'null') || initialPatches);
-    setFeatureFlags(JSON.parse(localStorage.getItem('featureFlags') || 'null') || initialFeatureFlags);
-    setAuditLog(JSON.parse(localStorage.getItem('auditLog') || 'null') || initialAuditLog);
-    
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+
+    importSharedNote();
+  }, [notes, setNotes, setActiveNoteId]);
+
+  useEffect(() => {
+    if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-
-    // Handle shared note URL on initial load
-    const hash = window.location.hash;
-    if (hash.startsWith('#/share/')) {
-        try {
-            const encodedData = hash.substring(8);
-            const decodedString = atob(encodedData);
-            const sharedNoteData = JSON.parse(decodedString);
-            
-            if (sharedNoteData.title && typeof sharedNoteData.content !== 'undefined') {
-                 const newSharedNote: Note = {
-                    id: `shared-${Date.now()}`,
-                    title: `[Shared] ${sharedNoteData.title}`,
-                    content: sharedNoteData.content,
-                    summary: '',
-                    tags: ['shared'],
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    folderId: null,
-                    type: 'text',
-                    attachments: [],
-                };
-                setNotes(prev => [newSharedNote, ...prev]);
-                setActiveNoteId(newSharedNote.id);
-                // Clean the URL
-                window.history.replaceState(null, '', ' ');
-            }
-        } catch (e) {
-            console.error("Failed to parse shared note link:", e);
-             window.history.replaceState(null, '', ' ');
-        }
-    } else if (savedNotes.length > 0 && !activeNoteId) {
-        setActiveNoteId(savedNotes[0].id);
-    }
-  }, []);
-
-  const saveToLocalStorage = useCallback((key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  }, []);
-
-  useEffect(() => saveToLocalStorage('notes', notes), [notes, saveToLocalStorage]);
-  useEffect(() => saveToLocalStorage('folders', folders), [folders, saveToLocalStorage]);
-  useEffect(() => saveToLocalStorage('connections', connections), [connections, saveToLocalStorage]);
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
   }, [theme]);
-   useEffect(() => saveToLocalStorage('aiSettings', settings), [settings, saveToLocalStorage]);
-   useEffect(() => saveToLocalStorage('patches', patches), [patches, saveToLocalStorage]);
-   useEffect(() => saveToLocalStorage('featureFlags', featureFlags), [featureFlags, saveToLocalStorage]);
-   useEffect(() => saveToLocalStorage('auditLog', auditLog), [auditLog, saveToLocalStorage]);
+
+  // Data persistence is managed centrally via Zustand actions and IndexedDB.
 
 
   const createNewNote = useCallback(() => {
-    const newNote: Note = {
-      id: `note-${Date.now()}`,
-      title: 'Untitled Note',
-      content: '',
-      summary: '',
-      tags: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      folderId: (activeFolderId && activeFolderId !== 'all' && activeFolderId !== 'uncategorized') ? activeFolderId : null,
-      type: 'text',
-      attachments: [],
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setActiveNoteId(newNote.id);
-    setView(View.Notes);
-  }, [activeFolderId]);
+    createNote();
+  }, [createNote]);
 
-  const updateNote = useCallback((updatedNote: Note) => {
-    setNotes(prev => prev.map(note => note.id === updatedNote.id ? { ...updatedNote, updatedAt: new Date().toISOString() } : note));
-  }, []);
+  const updateNoteCallback = useCallback((updatedNote: Note) => {
+    updateNote(updatedNote);
+  }, [updateNote]);
   
-  const deleteNote = useCallback((id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id));
-    if (activeNoteId === id) {
-      setActiveNoteId(null);
-    }
-  }, [activeNoteId]);
+  const deleteNoteCallback = useCallback((id: string) => {
+    deleteNote(id);
+  }, [deleteNote]);
   
-  const addFolder = useCallback((name: string) => {
-    if (folders.some(f => f.name === name)) {
-      alert("A folder with this name already exists.");
-      return;
-    }
-    const newFolder: Folder = {
-      id: `folder-${Date.now()}`,
-      name: name,
-      createdAt: new Date().toISOString(),
-      description: ''
-    };
-    setFolders(prev => [...prev, newFolder]);
-    setActiveFolderId(newFolder.id);
-  }, [folders]);
+  const addFolderCallback = useCallback((name: string) => {
+    addFolder(name);
+  }, [addFolder]);
 
-  const updateFolder = useCallback((updatedFolder: Folder) => {
-    setFolders(prev => prev.map(f => f.id === updatedFolder.id ? updatedFolder : f));
-  }, []);
+  const updateFolderCallback = useCallback((updatedFolder: Folder) => {
+    updateFolder(updatedFolder);
+  }, [updateFolder]);
 
-  const reorderFolders = useCallback((draggedId: string, targetId: string) => {
-    setFolders(prev => {
-        const draggedIndex = prev.findIndex(f => f.id === draggedId);
-        const targetIndex = prev.findIndex(f => f.id === targetId);
-
-        if (draggedIndex === -1 || targetIndex === -1) return prev;
-
-        const newFolders = [...prev];
-        const [draggedItem] = newFolders.splice(draggedIndex, 1);
-        newFolders.splice(targetIndex, 0, draggedItem);
-        return newFolders;
-    });
-  }, []);
+  const reorderFoldersCallback = useCallback((draggedId: string, targetId: string) => {
+    reorderFolders(draggedId, targetId);
+  }, [reorderFolders]);
 
   const handleAiAction = useCallback((action: AiAction): string => {
-    console.log("Executing AI Action:", action);
     switch (action.tool) {
         case 'get_note_content': {
             const { note_id } = action.args;
@@ -189,14 +129,9 @@ const App: React.FC = () => {
         }
         case 'set_note_metadata': {
             const { note_id, language, type } = action.args;
-            let noteExists = false;
-            setNotes(prev => prev.map(n => {
-                if (n.id === note_id) {
-                    noteExists = true;
-                    return { ...n, language: language || n.language, type: type || n.type };
-                }
-                return n;
-            }));
+            const nextNotes = notes.map(n => n.id === note_id ? { ...n, language: language || n.language, type: type || n.type } : n);
+            const noteExists = notes.some(n => n.id === note_id);
+            setNotes(nextNotes);
             return noteExists ? `Successfully updated metadata for note ${note_id}.` : `Error: Note with ID '${note_id}' not found.`;
         }
         case 'create_note': {
@@ -223,7 +158,9 @@ const App: React.FC = () => {
                 type: 'text',
                 attachments: [],
             };
-            setNotes(prev => [newNote, ...prev]);
+            setNotes([newNote, ...notes]);
+            setActiveNoteId(newNote.id);
+            setView(View.Notes);
             return `Successfully created note with ID ${newNote.id}.`;
         }
         case 'create_folder': {
@@ -237,7 +174,7 @@ const App: React.FC = () => {
                 createdAt: new Date().toISOString(),
                 description: '',
             };
-            setFolders(prev => [...prev, newFolder]);
+            setFolders([...folders, newFolder]);
             return `Successfully created folder with ID ${newFolder.id}.`;
         }
         case 'delete_folder': {
@@ -246,9 +183,9 @@ const App: React.FC = () => {
                 return `Error: Folder with ID '${folder_id}' not found.`;
             }
             // Reassign notes to uncategorized
-            setNotes(prev => prev.map(n => n.folderId === folder_id ? { ...n, folderId: null } : n));
+            setNotes(notes.map(n => n.folderId === folder_id ? { ...n, folderId: null } : n));
             // Delete folder
-            setFolders(prev => prev.filter(f => f.id !== folder_id));
+            setFolders(folders.filter(f => f.id !== folder_id));
              if (activeFolderId === folder_id) {
                 setActiveFolderId('all');
             }
@@ -256,14 +193,9 @@ const App: React.FC = () => {
         }
         case 'update_folder_description': {
             const { folder_id, description } = action.args;
-            let folderExists = false;
-            setFolders(prev => prev.map(f => {
-                if (f.id === folder_id) {
-                    folderExists = true;
-                    return { ...f, description };
-                }
-                return f;
-            }));
+            const nextFolders = folders.map(f => f.id === folder_id ? { ...f, description } : f);
+            const folderExists = folders.some(f => f.id === folder_id);
+            setFolders(nextFolders);
             return folderExists ? `Successfully updated description for folder ${folder_id}.` : `Error: Folder with ID '${folder_id}' not found.`;
         }
         case 'propose_code_patch': {
@@ -278,19 +210,14 @@ const App: React.FC = () => {
                 createdAt: new Date().toISOString(),
                 modelUsed: 'gemini',
             };
-            setPatches(prev => [newPatch, ...prev]);
+            setPatches([newPatch, ...patches]);
             return `Successfully proposed a new patch. You can review it in the Dev Studio.`;
         }
         case 'update_note_title': {
             const { note_id, new_title } = action.args;
-            let noteExists = false;
-            setNotes(prev => prev.map(n => {
-                if (n.id === note_id) {
-                    noteExists = true;
-                    return { ...n, title: new_title };
-                }
-                return n;
-            }));
+            const nextNotes = notes.map(n => n.id === note_id ? { ...n, title: new_title } : n);
+            const noteExists = notes.some(n => n.id === note_id);
+            setNotes(nextNotes);
             return noteExists ? `Successfully updated title for note ${note_id}.` : `Error: Note with ID '${note_id}' not found.`;
         }
          case 'move_note_to_folder': {
@@ -298,14 +225,9 @@ const App: React.FC = () => {
              if (folder_id && !folders.some(f => f.id === folder_id)) {
                 return `Error: Folder with ID '${folder_id}' does not exist.`;
             }
-            let noteExists = false;
-            setNotes(prev => prev.map(n => {
-                if (n.id === note_id) {
-                    noteExists = true;
-                    return { ...n, folderId: folder_id || null };
-                }
-                return n;
-            }));
+            const nextNotes = notes.map(n => n.id === note_id ? { ...n, folderId: folder_id || null } : n);
+            const noteExists = notes.some(n => n.id === note_id);
+            setNotes(nextNotes);
             return noteExists ? `Successfully moved note.` : `Error: Note with ID '${note_id}' not found.`;
         }
         case 'list_folders': {
@@ -313,26 +235,16 @@ const App: React.FC = () => {
         }
         case 'update_note': {
             const { note_id, content } = action.args;
-            let noteExists = false;
-            setNotes(prev => prev.map(n => {
-                if (n.id === note_id) {
-                    noteExists = true;
-                    return { ...n, content: n.content + "\n\n" + content, updatedAt: new Date().toISOString() };
-                }
-                return n;
-            }));
+            const nextNotes = notes.map(n => n.id === note_id ? { ...n, content: n.content + "\n\n" + content, updatedAt: new Date().toISOString() } : n);
+            const noteExists = notes.some(n => n.id === note_id);
+            setNotes(nextNotes);
             return noteExists ? `Successfully appended content to note ${note_id}.` : `Error: Note with ID '${note_id}' not found.`;
         }
         case 'write_file': {
             const { note_id, content } = action.args;
-            let noteExists = false;
-            setNotes(prev => prev.map(n => {
-                if (n.id === note_id) {
-                    noteExists = true;
-                    return { ...n, content: content, updatedAt: new Date().toISOString() };
-                }
-                return n;
-            }));
+            const nextNotes = notes.map(n => n.id === note_id ? { ...n, content: content, updatedAt: new Date().toISOString() } : n);
+            const noteExists = notes.some(n => n.id === note_id);
+            setNotes(nextNotes);
             return noteExists ? `Successfully wrote content to note ${note_id}.` : `Error: Note with ID '${note_id}' not found.`;
         }
         default:
@@ -341,19 +253,19 @@ const App: React.FC = () => {
   }, [notes, folders, activeFolderId]);
   
   const handlePatchStatusChange = useCallback((patchId: string, status: 'approved' | 'rejected') => {
-      setPatches(prev => prev.map(p => p.id === patchId ? {...p, status} : p));
+      setPatches(patches.map(p => p.id === patchId ? {...p, status} : p));
       const newLog: AuditLogEntry = {
           id: `log-${Date.now()}`,
           patchId,
           timestamp: new Date().toISOString(),
           status,
       };
-      setAuditLog(prev => [newLog, ...prev]);
-  }, []);
+      setAuditLog([newLog, ...auditLog]);
+  }, [patches, auditLog]);
   
   const handleToggleFeatureFlag = useCallback((flagId: string) => {
-      setFeatureFlags(prev => prev.map(f => f.id === flagId ? {...f, isEnabled: !f.isEnabled} : f));
-  }, []);
+      setFeatureFlags(featureFlags.map(f => f.id === flagId ? {...f, isEnabled: !f.isEnabled} : f));
+  }, [featureFlags]);
 
   const onExport = useCallback(() => {
     const data = {
@@ -403,13 +315,17 @@ const App: React.FC = () => {
                 }
 
                 if (window.confirm("This will replace all your current data. This action cannot be undone. Are you sure you want to continue?")) {
-                    setNotes(data.notes || []);
+                    const importedNotes = data.notes || [];
+                    setNotes(importedNotes);
                     setFolders(data.folders || []);
                     setConnections(data.connections || []);
                     setSettings(data.settings || defaultSettings);
                     setPatches(data.patches || []);
                     setFeatureFlags(data.featureFlags || []);
                     setAuditLog(data.auditLog || []);
+                    setActiveNoteId(importedNotes[0]?.id || null);
+                    setActiveFolderId('all');
+                    setView(View.Notes);
                     alert("Data imported successfully!");
                 }
             } catch (error) {
@@ -423,6 +339,15 @@ const App: React.FC = () => {
   }, []);
 
   const activeNote = useMemo(() => notes.find(note => note.id === activeNoteId), [notes, activeNoteId]);
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return notes;
+    const lowerQuery = searchQuery.toLowerCase();
+    return notes.filter(note =>
+      note.title.toLowerCase().includes(lowerQuery) ||
+      note.content.toLowerCase().includes(lowerQuery) ||
+      note.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    );
+  }, [notes, searchQuery]);
   
   const filteredNotes = useMemo(() => {
     if (!activeFolderId || activeFolderId === 'all') return notes;
@@ -481,6 +406,41 @@ const App: React.FC = () => {
         )}
         {view === View.Graph && <KnowledgeGraph notes={notes} connections={connections} setConnections={setConnections} settings={settings} setActiveNoteId={setActiveNoteId} setView={setView} />}
         {view === View.Chat && <ChatView settings={settings} notes={notes} folders={folders} onAiAction={handleAiAction} />}
+        {view === View.Search && (
+          <div className="flex flex-col flex-1 p-6 md:p-8 overflow-y-auto">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Search Notes</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">Find notes by title, content, or tags.</p>
+              </div>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search your notes..."
+                className="w-full sm:w-96 px-4 py-2 border rounded-lg bg-white dark:bg-dark-secondary border-gray-300 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-light-accent"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {searchResults.length === 0 ? (
+                <div className="p-6 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 text-center text-gray-500 dark:text-gray-400">
+                  No notes match your search. Try another keyword.
+                </div>
+              ) : searchResults.map(note => (
+                <button
+                  key={note.id}
+                  onClick={() => setActiveNoteId(note.id)}
+                  className="text-left p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface hover:border-light-accent transition"
+                >
+                  <h3 className="font-semibold text-lg">{note.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3">{note.content}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    {note.tags.map(tag => (<span key={tag} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">{tag}</span>))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {view === View.DevStudio && <DevStudioView patches={patches} featureFlags={featureFlags} auditLog={auditLog} onPatchStatusChange={handlePatchStatusChange} onToggleFeatureFlag={handleToggleFeatureFlag} />}
       </main>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} settings={settings} onSave={setSettings} />

@@ -117,7 +117,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, settings, updateNote }) =
         if (!apiKey) {
             throw new Error("API key for Gemini is not configured. Please set it in Settings.");
         }
-        const result = await summarizeAndTagNote(note.content, apiKey);
+        const result = await summarizeAndTagNote(content, apiKey);
         if (result) {
             updateNote({ ...note, summary: result.summary, tags: result.tags });
         }
@@ -323,8 +323,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, settings, updateNote }) =
   const handleShareNote = () => {
     try {
         const dataToShare = {
-            title: note.title,
-            content: note.content,
+            title,
+            content,
         };
         const jsonString = JSON.stringify(dataToShare);
         const encodedData = btoa(jsonString);
