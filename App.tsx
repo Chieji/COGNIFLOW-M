@@ -179,7 +179,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleAiAction = useCallback((action: AiAction): string => {
-    console.log("Executing AI Action:", action);
     switch (action.tool) {
         case 'get_note_content': {
             const { note_id } = action.args;

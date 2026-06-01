@@ -394,18 +394,21 @@ When asked to read notes, create or manage notes and folders, or propose code ch
         }
         
         if (useWebSearch) {
+            let finalResponse: GenerateContentResponse | undefined;
             const stream = await ai.models.generateContentStream({
                 model: model,
                 contents: fullHistory,
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                config,
+                config: {
+                    ...config,
+                    systemInstruction: systemInstruction,
+                },
             });
             for await (const chunk of stream) {
                 onChunk(chunk.text);
+                finalResponse = chunk;
             }
-            const finalResponse = await stream.response;
             const citations: Citation[] = [];
-            if (finalResponse.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+            if (finalResponse?.candidates?.[0]?.groundingMetadata?.groundingChunks) {
                 for (const chunk of finalResponse.candidates[0].groundingMetadata.groundingChunks) {
                     if (chunk.web) {
                         citations.push({ uri: chunk.web.uri, title: chunk.web.title || chunk.web.uri });
@@ -419,8 +422,10 @@ When asked to read notes, create or manage notes and folders, or propose code ch
         let response: GenerateContentResponse = await ai.models.generateContent({
             model: model,
             contents: fullHistory,
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            config,
+            config: {
+                ...config,
+                systemInstruction: systemInstruction,
+            },
         });
 
         const functionCalls = response.functionCalls;
@@ -448,8 +453,10 @@ When asked to read notes, create or manage notes and folders, or propose code ch
             const stream = await ai.models.generateContentStream({
                 model: model,
                 contents: historyWithToolResponses,
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                config,
+                config: {
+                    ...config,
+                    systemInstruction: systemInstruction,
+                },
             });
             for await (const chunk of stream) {
                 onChunk(chunk.text);
