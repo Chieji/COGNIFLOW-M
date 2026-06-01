@@ -132,6 +132,11 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ notes, connections, set
       node.attr('transform', d => `translate(${d.x},${d.y})`);
     });
 
+    return () => {
+      simulation.stop();
+      svg.selectAll('*').interrupt();
+      svg.selectAll('*').remove();
+    };
   }, [graphData, setActiveNoteId, setView]);
 
   return (
