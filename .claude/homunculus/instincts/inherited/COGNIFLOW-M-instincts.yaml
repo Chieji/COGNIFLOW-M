@@ -1,0 +1,318 @@
+# Instincts generated from https://github.com/Chieji/COGNIFLOW-M
+# Generated: 2026-06-01T01:37:19.992Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: COGNIFLOW-M-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix
+
+## Evidence
+
+- 2 commits analyzed
+- Detected conventional commit pattern
+- Examples: fix: Fix TypeScript errors in geminiService.ts and remove console.log from App.tsx, fix: Resolve TypeScript errors in geminiService and remove console.log from App.tsx
+
+---
+id: COGNIFLOW-M-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Commit Length
+
+## Action
+
+Write moderate-length commit messages (~83 characters)
+
+## Evidence
+
+- Average commit message length: 83 chars
+- Based on 2 commits
+
+---
+id: COGNIFLOW-M-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: COGNIFLOW-M-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: COGNIFLOW-M-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: COGNIFLOW-M-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Chieji/COGNIFLOW-M
+---
+
+# COGNIFLOW M Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: cogniflow-m-instinct-file-naming
+trigger: "When creating a new file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct File Naming
+
+## Action
+
+Name the file using snake_case
+
+## Evidence
+
+- Pattern: namingConventions.files = snake_case
+
+---
+id: cogniflow-m-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern: namingConventions.functions = camelCase
+
+---
+id: cogniflow-m-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern: namingConventions.classes = PascalCase
+
+---
+id: cogniflow-m-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern: namingConventions.constants = SCREAMING_SNAKE_CASE
+
+---
+id: cogniflow-m-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern: importStyle = relative
+
+---
+id: cogniflow-m-instinct-export-style
+trigger: "When exporting modules or functions"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Export Style
+
+## Action
+
+Use either named or default exports as appropriate (mixed style)
+
+## Evidence
+
+- Pattern: exportStyle = mixed
+
+---
+id: cogniflow-m-instinct-commit-format
+trigger: "When writing a commit message for a bug fix"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Commit Format
+
+## Action
+
+Start the commit message with 'fix:' followed by a short description
+
+## Evidence
+
+- Pattern: commits.prefixes includes 'fix'
+- Examples: 'fix: Fix TypeScript errors in geminiService.ts and remove console.log from App.tsx'
+
+---
+id: cogniflow-m-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Commit Length
+
+## Action
+
+Keep the commit message concise, around 80 characters
+
+## Evidence
+
+- Pattern: commits.averageLength = 83
+
+---
+id: cogniflow-m-instinct-error-handling
+trigger: "When handling errors in code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Error Handling
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Pattern: errorHandling.style = try-catch
+
+---
+id: cogniflow-m-instinct-test-location
+trigger: "When adding or organizing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: Chieji/COGNIFLOW-M
+---
+
+# Cogniflow M Instinct Test Location
+
+## Action
+
+Place test files in a separate directory from source files
+
+## Evidence
+
+- Pattern: testLocation = separate
+
