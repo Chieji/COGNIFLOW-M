@@ -63,6 +63,12 @@ You will need the following installed on your system:
     ```
     The application will typically be available at `http://localhost:3000`.
 
+### Additional scripts
+
+* `npm run build` — build the application for production
+* `npm run lint` — run ESLint across the codebase
+* `npm test` — run the unit test suite with Vitest
+
 ## Contributing
 
 We welcome contributions! Please feel free to submit issues and pull requests.
